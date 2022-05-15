@@ -1,12 +1,43 @@
+import Swal from 'sweetalert2';
 import {firebase, googleAuthProvider} from '../firebase/firebase-Config';
 import {types} from '../types/types';
+import { noteLogout } from './notes';
+import { finishLoading, startLoading } from './ui';
 
 export const startLoginEmailPassword = (email,password) =>{
     return (dispatch) => {
-        setTimeout(() => {
-            dispatch(login(123,'Nathalyy'));
-            
-        }, 3500);
+        dispatch( startLoading());
+        firebase.auth().signInWithEmailAndPassword(email,password)
+        .then( ({user}) =>{
+            dispatch(login(user.uid, user.displayName));
+            dispatch(finishLoading());
+        })
+        .catch( e =>{
+            //console.log(e);
+            dispatch(finishLoading());
+            Swal.fire('Error', e.message, 'error');
+
+        })
+
+       
+
+    } // siempre regresa un callback (se usa cuando es asincrona)
+}
+
+export const startRegisterWithEmailPasswordName = (email,password, name) =>{
+    return (dispatch) => {
+        firebase.auth().createUserWithEmailAndPassword(email,password)
+            .then( async({user}) =>{
+                await user.updateProfile({displayName: name});
+                dispatch(
+                    login(user.uid, user.displayName)
+                );
+            })
+            .catch( e =>{
+                //console.log(e);
+                Swal.fire('Error', e.message, 'error');
+
+            })
 
     } // siempre regresa un callback (se usa cuando es asincrona)
 }
@@ -26,15 +57,25 @@ export const startGoogleLogin = () =>{
 
 }
 
-
-
-
-export const login = (uid,displayName) => {
-    return {
-        type: types.login,
-        payload : {
-            uid,
-            displayName
-        }
+export const login = (uid,displayName) => ({
+    type: types.login,
+    payload : {
+        uid,
+        displayName
     }
+    
+});
+
+export const startLogout = () => {
+    return async(dispatch) => {
+        await firebase.auth().signOut();
+        dispatch(logout());
+        dispatch(noteLogout());
+    }
+
 }
+
+export const logout = () =>({
+    type: types.logout
+})
+
